@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Doppler Platoon — Simulator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F1ED;
+  --surface:#FFFFFF;
+  --surface2:#F7F6F2;
+  --border:#DDDBD3;
+  --border2:#EDEAE3;
+  --text:#111210;
+  --muted:#72706A;
+  --accent:#1D4ED8;
+  --accent-bg:#EFF6FF;
+  --green:#166534;
+  --green-bg:#F0FDF4;
+  --amber:#92400E;
+  --amber-bg:#FFFBEB;
+  --red:#991B1B;
+  --red-bg:#FEF2F2;
+  --purple:#5B21B6;
+  --purple-bg:#F5F3FF;
+  --navy:#1A1E2E;
+  --header-h:48px;
+  --tab-h:38px;
+  --status-h:28px;
+  --mono:'Courier New',Courier,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── HEADER ── */
+#header{
+  height:var(--header-h);
+  background:var(--navy);
+  display:flex;align-items:center;
+  padding:0 16px;gap:14px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 8px rgba(0,0,0,.35);
+}
+#header .logo{
+  display:flex;align-items:center;gap:9px;
+}
+#header .logo-icon{
+  width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,#2563EB,#1D4ED8);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.1);
+}
+#header .logo-title{color:#F8F8F6;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+#header .logo-sub{color:#8A8A82;font-size:10px;font-family:var(--mono);margin-top:1px}
+#header .sep{width:1px;height:22px;background:rgba(255,255,255,.1)}
+#header .hstat{display:flex;align-items:center;gap:6px;color:#A8A89E;font-size:10px;font-family:var(--mono)}
+#header .hstat .val{color:#E8E8E4;font-weight:700}
+#header .controls{margin-left:auto;display:flex;gap:6px;align-items:center}
+.hbtn{
+  padding:4px 11px;border-radius:5px;font-size:10px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+  border:1px solid rgba(255,255,255,.12);color:#D0D0C8;
+  background:rgba(255,255,255,.05);
+  transition:background .15s,color .15s;font-family:var(--sans);
+}
+.hbtn:hover{background:rgba(255,255,255,.12);color:#fff}
+.hbtn-accent{background:#2563EB;border-color:#1D4ED8;color:#fff}
+.hbtn-accent:hover{background:#1D4ED8}
+.pill{
+  padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;font-family:var(--sans);
+}
+.pill-green{background:#166534;color:#BBF7D0}
+.pill-amber{background:#78350F;color:#FDE68A}
+.pill-red{background:#7F1D1D;color:#FECACA}
+
+/* ── TABS ── */
+#tabbar{
+  height:var(--tab-h);
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-end;
+  padding:0 12px;gap:0;
+  position:sticky;top:var(--header-h);z-index:90;
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.tab{
+  padding:7px 14px 8px;font-size:11px;font-weight:600;
+  letter-spacing:.04em;cursor:pointer;
+  color:var(--muted);border-bottom:2px solid transparent;
+  margin-bottom:-1px;user-select:none;
+  transition:color .15s;white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── PANES ── */
+.pane{padding:14px;min-height:calc(100vh - var(--header-h) - var(--tab-h) - var(--status-h))}
+.pane.hidden{display:none!important}
+
+/* ── CARDS ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;
+}
+.card-head{
+  padding:8px 12px;border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface2);
+}
+.card-head-label{
+  font-size:10px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted);
+}
+.card-body{padding:12px}
+
+/* ── METRIC CARD ── */
+.metric-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;
+  border-left:3px solid var(--border);
+}
+.metric-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.metric-val{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1;letter-spacing:-.01em}
+.metric-unit{font-size:9px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+
+/* ── CHIP BLOCKS ── */
+.chip{
+  display:inline-flex;flex-direction:column;align-items:flex-start;
+  padding:5px 9px;border-radius:5px;border:1px solid var(--border);
+  background:var(--surface);font-family:var(--mono);font-size:10px;
+  font-weight:700;color:var(--text);white-space:nowrap;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+}
+.chip .chip-sub{font-size:9px;font-weight:400;color:var(--muted);margin-top:1px;font-family:var(--sans)}
+.chip.active{
+  background:var(--accent-bg);border-color:#93C5FD;color:var(--accent);
+  box-shadow:0 0 0 2px rgba(29,78,216,.08);
+}
+.chip.active-g{background:var(--green-bg);border-color:#86EFAC;color:var(--green);box-shadow:0 0 0 2px rgba(22,101,52,.08);}
+.chip.active-a{background:var(--amber-bg);border-color:#FCD34D;color:var(--amber);box-shadow:0 0 0 2px rgba(146,64,14,.08);}
+.chip.active-r{background:var(--red-bg);border-color:#FCA5A5;color:var(--red);box-shadow:0 0 0 2px rgba(153,27,27,.08);}
+
+/* ── NODES ── */
+.node{
+  width:9px;height:9px;border-radius:50%;border:1.5px solid var(--border);
+  display:inline-block;flex-shrink:0;transition:background .15s,border-color .15s,box-shadow .15s;
+}
+.node.hi{background:#16A34A;border-color:#15803D;box-shadow:0 0 0 2px rgba(22,163,74,.2)}
+.node.lo{background:var(--border);border-color:var(--border2)}
+.node.warn{background:#D97706;border-color:#B45309;box-shadow:0 0 0 2px rgba(217,119,6,.2)}
+.node.err{background:#DC2626;border-color:#B91C1C;box-shadow:0 0 0 2px rgba(220,38,38,.2)}
+
+/* ── LEDs ── */
+.led{
+  width:10px;height:10px;border-radius:50%;border:1.5px solid var(--border);
+  display:inline-block;flex-shrink:0;transition:all .15s;
+}
+.led.g{background:#16A34A;border-color:#15803D;box-shadow:0 0 5px rgba(22,163,74,.5)}
+.led.r{background:#DC2626;border-color:#B91C1C;box-shadow:0 0 5px rgba(220,38,38,.5)}
+.led.y{background:#D97706;border-color:#B45309;box-shadow:0 0 5px rgba(217,119,6,.5)}
+.led.off{background:#E5E3DB;border-color:var(--border)}
+
+/* ── BUTTONS ── */
+.btn{
+  padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);background:var(--surface2);
+  color:var(--text);transition:all .15s;font-family:var(--sans);
+  letter-spacing:.02em;
+}
+.btn:hover{background:var(--border2);border-color:var(--border)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);border-color:#1E40AF;color:#fff}
+.btn-primary:hover{background:#1D4ED8}
+.btn-danger{background:var(--red-bg);border-color:#FCA5A5;color:var(--red)}
+.btn-danger:hover{background:#FEE2E2}
+.btn-warn{background:var(--amber-bg);border-color:#FCD34D;color:var(--amber)}
+.btn-warn:hover{background:#FEF3C7}
+.btn-success{background:var(--green-bg);border-color:#86EFAC;color:var(--green)}
+.btn-success:hover{background:#DCFCE7}
+
+/* ── SLIDERS ── */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  height:4px;border-radius:2px;background:var(--border2);
+  outline:none;cursor:pointer;width:100%;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);border:2px solid #fff;cursor:pointer;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+
+/* ── LOG ── */
+.log-entry{padding:2px 0;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:10px;color:var(--muted)}
+.log-entry.ok{color:var(--green)}
+.log-entry.warn{color:var(--amber)}
+.log-entry.err{color:var(--red)}
+
+/* ── TOGGLE ── */
+.toggle{
+  width:40px;height:22px;border-radius:11px;border:1.5px solid var(--border);
+  background:var(--border2);position:relative;cursor:pointer;
+  transition:background .2s,border-color .2s;
+}
+.toggle.on{background:#16A34A;border-color:#15803D}
+.toggle-thumb{
+  position:absolute;top:3px;width:14px;height:14px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transition:left .2s;
+}
+
+/* ── STATUS BAR ── */
+#statusbar{
+  height:var(--status-h);
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:16px;
+  position:sticky;bottom:0;z-index:90;
+}
+.sb-item{font-size:10px;color:var(--muted);font-family:var(--mono);display:flex;gap:4px;align-items:center}
+.sb-val{font-weight:700;color:var(--text)}
+
+/* ── FLOW CONNECTOR ── */
+.flow-arrow{color:#94A3B8;font-size:12px;padding:0 2px;align-self:center}
+
+/* ── GRAPH LABEL ── */
+.graph-label{font-size:9px;font-family:var(--mono);font-weight:700}
+
+/* ── CODE ── */
+.code-block{
+  background:#0F172A;color:#E2E8F0;
+  font-family:var(--mono);font-size:11px;line-height:1.65;
+  padding:14px;border-radius:0 0 8px 8px;overflow:auto;max-height:520px;
+}
+.ck{color:#C084FC}.cc{color:#64748B;font-style:italic}.cn{color:#60A5FA}.cs{color:#34D399}.cd{color:#FB923C}
+
+/* ── TUNER ROW ── */
+.tuner-row{
+  display:grid;grid-template-columns:160px 1fr 60px;
+  align-items:center;gap:10px;padding:7px 0;
+  border-bottom:1px solid var(--border2);
+}
+.tuner-label{font-size:11px;color:var(--muted)}
+.tuner-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;color:var(--text)}
+
+/* ── SECTION DIVIDER ── */
+.section-title{
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;padding-bottom:4px;
+  border-bottom:1px solid var(--border2);
+}
+
+/* ── SPARKLINE ── */
+.sparkline{display:block}
+
+/* animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pane:not(.hidden){animation:fadeIn .15s ease}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.blink{animation:blink .9s step-end infinite}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-title">Doppler Platoon Sim</div>
+      <div class="logo-sub">HB100 · ESP32 · 74HCT74 · NE555 · 10.525 GHz</div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="hstat">SIM <span class="val" id="hd-t">0.0s</span></div>
+  <div class="hstat">FREQ <span class="val" id="hd-f">0 Hz</span></div>
+  <div class="hstat">GAP <span class="val" id="hd-g">2.00 m</span></div>
+  <div class="hstat">DRIVE <span class="val" id="hd-d">FWD</span></div>
+  <div class="led off blink" id="hd-led" style="margin-left:2px"></div>
+  <span id="hd-pill" class="pill pill-green">RUNNING</span>
+
+  <div class="controls">
+    <button class="hbtn" id="pauseBtn" onclick="toggleSim()">⏸ Pause</button>
+    <button class="hbtn" onclick="resetAll()">↺ Reset</button>
+    <button class="hbtn hbtn-accent" onclick="softwareTrigger()">⚡ GPIO33</button>
+    <button class="hbtn" onclick="resetLatch()" style="color:#86EFAC;border-color:rgba(134,239,172,.2)">🔓 CLR</button>
+  </div>
+</div>
+
+<!-- ══ TABS ══ -->
+<div id="tabbar">
+  <div class="tab active" id="tab-arch"    onclick="switchTab('arch')">Architecture</div>
+  <div class="tab"        id="tab-vehicle" onclick="switchTab('vehicle')">Vehicle</div>
+  <div class="tab"        id="tab-graph"   onclick="switchTab('graph')">Graphs</div>
+  <div class="tab"        id="tab-esp"     onclick="switchTab('esp')">ESP32</div>
+  <div class="tab"        id="tab-tune"    onclick="switchTab('tune')">Tuner</div>
+  <div class="tab"        id="tab-code"    onclick="switchTab('code')">Code</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ARCHITECTURE
+══════════════════════════════════════ -->
+<div id="pane-arch" class="pane" style="display:grid;grid-template-columns:1fr 220px;gap:12px">
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- METRICS -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+      <div class="metric-card" style="border-left-color:var(--accent)">
+        <div class="metric-label">Doppler</div>
+        <div class="metric-val" id="m-freq" style="color:var(--accent)">0</div>
+        <div class="metric-unit">Hz · SQ</div>
+      </div>
+      <div class="metric-card" style="border-left-color:#0E7490">
+        <div class="metric-label">Rel Speed</div>
+        <div class="metric-val" id="m-spd" style="color:#0E7490">0.00</div>
+        <div class="metric-unit">m/s closing</div>
+      </div>
+      <div class="metric-card" style="border-left-color:var(--green)">
+        <div class="metric-label">Gap</div>
+        <div class="metric-val" id="m-gap" style="color:var(--green)">2.00</div>
+        <div class="metric-unit">metres</div>
+      </div>
+      <div class="metric-card" style="border-left-color:var(--amber)">
+        <div class="metric-label">Latch 1Q</div>
+        <div class="metric-val" id="m-latch" style="color:var(--amber);font-size:16px">LOW</div>
+        <div class="metric-unit">U5 74HCT74</div>
+      </div>
+      <div class="metric-card" style="border-left-color:var(--purple)">
+        <div class="metric-label">Drive</div>
+        <div class="metric-val" id="m-drive" style="color:var(--green);font-size:16px">FWD</div>
+        <div class="metric-unit">TB6612FNG</div>
+      </div>
+    </div>
+
+    <!-- SIGNAL FLOW DIAGRAM -->
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Signal Flow — Active Blocks</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="node" id="nd-sq"></div><span style="font-size:9px;color:var(--muted)">SQ</span>
+          <div class="node" id="nd-trig" style="margin-left:4px"></div><span style="font-size:9px;color:var(--muted)">TRIG</span>
+          <div class="node" id="nd-q" style="margin-left:4px"></div><span style="font-size:9px;color:var(--muted)">1Q</span>
+        </div>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ROW: Power -->
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Power Chain</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="chip active-g" id="ch-bat">🔋 11.1V BAT<div class="chip-sub">BAT_SW</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip active-g" id="ch-buck">LM2596<div class="chip-sub">5V buck</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-diode">1N4007<div class="chip-sub">5VA ~4.7V</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-vg">VG ~2.35V<div class="chip-sub">1kΩ/2kΩ bias</div></div>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <div class="led" id="led-5v"></div><span style="font-size:9px;color:var(--muted)">5V</span>
+              <div class="led" id="led-5va"></div><span style="font-size:9px;color:var(--muted)">5VA</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:var(--border2)"></div>
+
+        <!-- ROW: Doppler -->
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Doppler Path</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="chip" id="ch-hb100">📡 HB100<div class="chip-sub">IF output</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-u1">U1 LM358P<div class="chip-sub">amp + env</div></div>
+            <span class="flow-arrow">SQ →</span>
+            <div class="chip" id="ch-u3">U3 HLF393N<div class="chip-sub">comparator</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-esp-sq">ESP32 GPIO32<div class="chip-sub">freq measure</div></div>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <div class="node" id="nd-sq2"></div><span style="font-size:9px;color:var(--muted)">SQ</span>
+              <div class="node" id="nd-env" style="margin-left:4px"></div><span style="font-size:9px;color:var(--muted)">ENV</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:var(--border2)"></div>
+
+        <!-- ROW: Threshold + Latch -->
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Threshold → Latch</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="chip" id="ch-u4">U4 HLF393N<div class="chip-sub">thresh comp</div></div>
+            <span class="flow-arrow">TRIG →</span>
+            <div class="chip" id="ch-clk">CLK_NODE<div class="chip-sub">diode-OR 47kΩ</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-u5">U5 74HCT74<div class="chip-sub">D flip-flop</div></div>
+            <span class="flow-arrow">1Q →</span>
+            <div class="chip" id="ch-div">1kΩ/2kΩ<div class="chip-sub">Q_3V3</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-esp-q">ESP32 GPIO34<div class="chip-sub">latch read</div></div>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <div class="node" id="nd-q2"></div><span style="font-size:9px;color:var(--muted)">1Q</span>
+              <div class="node" id="nd-qb" style="margin-left:4px"></div><span style="font-size:9px;color:var(--muted)">/Q</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:var(--border2)"></div>
+
+        <!-- ROW: Timers + AND -->
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Timing & Gating</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="chip" id="ch-u9">U9 NE555<div class="chip-sub">dead-time</div></div>
+            <span class="flow-arrow">DEAD →</span>
+            <div class="chip" id="ch-u6">U6 74HC08<div class="chip-sub">AND gate</div></div>
+            <span class="flow-arrow">← PULSE</span>
+            <div class="chip" id="ch-u10">U10 NE555<div class="chip-sub">rev pulse</div></div>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <div class="node" id="nd-dead"></div><span style="font-size:9px;color:var(--muted)">DEAD</span>
+              <div class="node" id="nd-pulse" style="margin-left:4px"></div><span style="font-size:9px;color:var(--muted)">PULSE</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:var(--border2)"></div>
+
+        <!-- ROW: Drive -->
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Drive Output</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="chip" id="ch-esp-cmd">ESP32 GPIO26<div class="chip-sub">CMD_FWD</div></div>
+            <span class="flow-arrow">→ U6 →</span>
+            <div class="chip" id="ch-u6out">FWD/BRK/REVP<div class="chip-sub">3 outputs</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-tb">TB6612FNG<div class="chip-sub">motor driver</div></div>
+            <span class="flow-arrow">→</span>
+            <div class="chip" id="ch-motor">🏎 Motor<div class="chip-sub">trailing veh</div></div>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+              <div class="led" id="led-fwd"></div><span style="font-size:9px;color:var(--muted)">FWD</span>
+              <div class="led" id="led-brk"></div><span style="font-size:9px;color:var(--muted)">BRK</span>
+              <div class="led" id="led-rev"></div><span style="font-size:9px;color:var(--muted)">REV</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EXECUTION LOG -->
+    <div class="card" style="flex:1">
+      <div class="card-head"><span class="card-head-label">Execution Log</span><span style="font-size:9px;color:var(--muted)">latest first</span></div>
+      <div id="timeline" style="max-height:120px;overflow-y:auto;padding:6px 12px"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Rail Voltages</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">BAT_SW</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px" id="rv-bat">11.10V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">5V rail</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:var(--accent)" id="rv-5v">5.00V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">5VA (~4.7V)</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:#0E7490" id="rv-5va">4.69V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">VG</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:var(--purple)" id="rv-vg">2.35V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">3V3L</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:var(--green)">3.30V</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Timer State</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">U9 dead-time</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px" id="rv-dead">0.000s</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">U10 rev pulse</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px" id="rv-pulse">0.000s</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">Thresh freq</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:11px" id="rv-tfreq">56.3Hz</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Status Indicators</span></div>
+      <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px">
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-trig"></div><span style="font-size:10px">TRIG</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-latch"></div><span style="font-size:10px">LATCH</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-dead"></div><span style="font-size:10px">DEAD</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-revp"></div><span style="font-size:10px">REV-P</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-fwd2"></div><span style="font-size:10px">FWD</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="ind-esp"></div><span style="font-size:10px">ESP32</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Quick Actions</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-warn" onclick="softwareTrigger()" style="width:100%">⚡ GPIO33 SW Trigger</button>
+        <button class="btn btn-success" onclick="resetLatch()" style="width:100%">🔓 Clear Latch (1/CLR)</button>
+        <button class="btn btn-primary" onclick="sendFWD(true)" style="width:100%">▶ CMD_FWD HIGH</button>
+        <button class="btn btn-danger" onclick="sendFWD(false)" style="width:100%">■ CMD_FWD LOW</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VEHICLE
+══════════════════════════════════════ -->
+<div id="pane-vehicle" class="pane hidden" style="display:flex;flex-direction:column;gap:12px">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-head-label">Lead Vehicle Speed</span>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:700" id="vl-lead">−1.0 m/s</span>
+      </div>
+      <div style="padding:10px 12px">
+        <input type="range" id="sl-lead" min="-3" max="3" step="0.1" value="-1" oninput="updateSlider('lead',this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;font-family:var(--mono)"><span>−3 (closing)</span><span>0</span><span>+3 (opening)</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-head-label">Trailing Vehicle Speed</span>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:700" id="vl-trail">1.0 m/s</span>
+      </div>
+      <div style="padding:10px 12px">
+        <input type="range" id="sl-trail" min="0" max="3" step="0.1" value="1" oninput="updateSlider('trail',this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;font-family:var(--mono)"><span>0</span><span>1.5</span><span>3.0</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-head-label">Detection Threshold</span>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:700" id="vl-thresh">0.8 m/s</span>
+      </div>
+      <div style="padding:10px 12px">
+        <input type="range" id="sl-thresh" min="0.2" max="2.5" step="0.05" value="0.8" oninput="updateSlider('thresh',this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;font-family:var(--mono)"><span>0.2</span><span>1.35</span><span>2.5</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn btn-warn" onclick="softwareTrigger()">⚡ GPIO33 SW Trigger</button>
+    <button class="btn" onclick="resetLatch()">🔓 Reset Latch</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="veh-emerg"></div><span style="font-size:10px;color:var(--muted)">EMERGENCY</span></div>
+      <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="veh-fwd"></div><span style="font-size:10px;color:var(--muted)">FWD</span></div>
+      <div style="display:flex;align-items:center;gap:5px"><div class="led off" id="veh-rev"></div><span style="font-size:10px;color:var(--muted)">REV</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-head-label">Platoon — Top View</span>
+      <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mono);color:var(--muted)">
+        <span id="v-relspd">relV: 0.00 m/s</span>
+        <span id="v-doppler">IF: 0 Hz</span>
+      </div>
+    </div>
+    <canvas id="vehicleCanvas" width="820" height="160" style="width:100%;display:block"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-head-label">HB100 IF Signal (Doppler)</span>
+      <span style="font-size:9px;font-family:var(--mono);color:var(--muted)">squaring → SQ → GPIO32</span>
+    </div>
+    <canvas id="radarCanvas" width="820" height="80" style="width:100%;display:block"></canvas>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     GRAPHS
+══════════════════════════════════════ -->
+<div id="pane-graph" class="pane hidden" style="display:flex;flex-direction:column;gap:10px">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Doppler Frequency — GPIO32 SQ</span><span style="font-size:9px;font-family:var(--mono);color:var(--accent)" id="gv-freq">0 Hz</span></div>
+      <canvas id="gFreq" width="380" height="96" style="width:100%;display:block"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Relative Speed</span><span style="font-size:9px;font-family:var(--mono);color:#0E7490" id="gv-spd">0.00 m/s</span></div>
+      <canvas id="gSpeed" width="380" height="96" style="width:100%;display:block"></canvas>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Gap Distance</span><span style="font-size:9px;font-family:var(--mono);color:var(--green)" id="gv-gap">2.00 m</span></div>
+      <canvas id="gGap" width="380" height="96" style="width:100%;display:block"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">GPIO Digital States</span></div>
+      <canvas id="gGpio" width="380" height="96" style="width:100%;display:block"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-head-label">Power Rails</span><span style="font-size:9px;color:var(--muted)">5V · 5VA · VG · 3V3L</span></div>
+    <canvas id="gPower" width="820" height="64" style="width:100%;display:block"></canvas>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     ESP32
+══════════════════════════════════════ -->
+<div id="pane-esp" class="pane hidden" style="display:grid;grid-template-columns:260px 1fr;gap:12px">
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">ESP32 Power</span></div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div class="toggle" id="espToggle" onclick="toggleESP()"><div class="toggle-thumb" id="espThumb" style="left:3px"></div></div>
+          <div>
+            <div style="font-weight:700;font-size:13px;font-family:var(--mono)" id="espLabel">OFF</div>
+            <div style="font-size:9px;color:var(--muted)">3.3V / VIN</div>
+          </div>
+          <div class="led off" id="led-esp-pwr" style="margin-left:auto"></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn" onclick="espReset()" style="font-size:10px;padding:3px 9px">↺ EN Reset</button>
+          <button class="btn btn-warn" onclick="softwareTrigger()" style="font-size:10px;padding:3px 9px">GPIO33</button>
+          <button class="btn btn-success" onclick="resetLatch()" style="font-size:10px;padding:3px 9px">CLR</button>
+          <button class="btn btn-primary" onclick="sendFWD(true)" style="font-size:10px;padding:3px 9px">FWD↑</button>
+          <button class="btn btn-danger" onclick="sendFWD(false)" style="font-size:10px;padding:3px 9px">FWD↓</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1">
+      <div class="card-head"><span class="card-head-label">GPIO Pin Map</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);background:var(--surface2)">
+            <th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.05em">Pin</th>
+            <th style="padding:5px 4px;text-align:left;color:var(--muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.05em">Label</th>
+            <th style="padding:5px 4px;text-align:center;color:var(--muted);font-weight:600;font-size:9px">Val</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--muted);font-weight:600;font-size:9px">●</th>
+          </tr>
+        </thead>
+        <tbody id="gpioTable"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Boot Log</span></div>
+      <div id="bootLog" style="padding:8px;font-size:10px;max-height:88px;overflow-y:auto;color:var(--green);line-height:1.6;font-family:var(--mono);background:var(--surface2)"></div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="card" style="flex:0 0 auto">
+      <div class="card-head"><span class="card-head-label">Signal Timing Diagram</span></div>
+      <canvas id="timingCanvas" width="520" height="192" style="width:100%;display:block"></canvas>
+    </div>
+    <div class="card" style="flex:1">
+      <div class="card-head"><span class="card-head-label">Serial Monitor</span><span style="font-size:9px;color:var(--muted);font-family:var(--mono)">115200 baud</span></div>
+      <div id="serialMon" style="padding:8px;font-size:10px;max-height:200px;overflow-y:auto;line-height:1.6;font-family:var(--mono);color:var(--accent);background:var(--surface2);border-radius:0 0 8px 8px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     TUNER
+══════════════════════════════════════ -->
+<div id="pane-tune" class="pane hidden" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+  <div class="card">
+    <div class="card-head"><span class="card-head-label">Physics Parameters</span></div>
+    <div class="card-body">
+      <div class="tuner-row"><span class="tuner-label">HB100 k-factor (Hz/m/s)</span><input type="range" min="60" max="80" step="0.1" value="70.42" oninput="tuneP('k',this.value)"><span class="tuner-val" id="tv-k">70.42</span></div>
+      <div class="tuner-row"><span class="tuner-label">Dead-time U9 (s)</span><input type="range" min="0.1" max="3" step="0.05" value="0.8" oninput="tuneP('dead',this.value)"><span class="tuner-val" id="tv-dead">0.80</span></div>
+      <div class="tuner-row"><span class="tuner-label">Rev pulse U10 (s)</span><input type="range" min="0.1" max="2" step="0.05" value="0.4" oninput="tuneP('pulse',this.value)"><span class="tuner-val" id="tv-pulse">0.40</span></div>
+      <div class="tuner-row"><span class="tuner-label">Detection threshold (m/s)</span><input type="range" min="0.2" max="2.5" step="0.05" value="0.8" oninput="tuneP('thresh',this.value)"><span class="tuner-val" id="tv-thresh">0.80</span></div>
+      <div class="tuner-row"><span class="tuner-label">Min safe gap (m)</span><input type="range" min="0.1" max="2" step="0.05" value="0.5" oninput="tuneP('safegap',this.value)"><span class="tuner-val" id="tv-safegap">0.50</span></div>
+      <div class="tuner-row"><span class="tuner-label">Starting gap (m)</span><input type="range" min="0.5" max="6" step="0.1" value="2.0" oninput="tuneP('startgap',this.value)"><span class="tuner-val" id="tv-startgap">2.00</span></div>
+      <div class="tuner-row"><span class="tuner-label">Sim speed (×)</span><input type="range" min="0.25" max="6" step="0.25" value="1" oninput="tuneP('simspeed',this.value)"><span class="tuner-val" id="tv-simspeed">1.00</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Component Values</span></div>
+      <div class="card-body">
+        <div class="tuner-row"><span class="tuner-label">R_top VG divider (kΩ)</span><input type="range" min="5" max="20" step="0.5" value="10" oninput="tuneP('rtop',this.value)"><span class="tuner-val" id="tv-rtop">10.0</span></div>
+        <div class="tuner-row"><span class="tuner-label">R_bot VG divider (kΩ)</span><input type="range" min="5" max="20" step="0.5" value="10" oninput="tuneP('rbot',this.value)"><span class="tuner-val" id="tv-rbot">10.0</span></div>
+        <div class="tuner-row"><span class="tuner-label">CLK pull-down (kΩ)</span><input type="range" min="10" max="100" step="5" value="47" oninput="tuneP('pulldown',this.value)"><span class="tuner-val" id="tv-pulldown">47</span></div>
+        <div class="tuner-row"><span class="tuner-label">1N4007 drop (mV)</span><input type="range" min="200" max="700" step="10" value="310" oninput="tuneP('diodedrop',this.value)"><span class="tuner-val" id="tv-diodedrop">310</span></div>
+        <div class="tuner-row"><span class="tuner-label">5V rail (V)</span><input type="range" min="4.8" max="5.3" step="0.01" value="5.0" oninput="tuneP('v5',this.value)"><span class="tuner-val" id="tv-v5">5.00</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-head-label">Computed Rail Values</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:var(--muted)">5VA = 5V − V_diode</span>
+          <span style="font-weight:700;color:var(--accent)" id="tc-5va">4.69V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:var(--muted)">VG = 5VA × Rbot/(Rtop+Rbot)</span>
+          <span style="font-weight:700;color:var(--purple)" id="tc-vg">2.35V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:var(--muted)">Q_3V3 = 5V × 2/3</span>
+          <span style="font-weight:700;color:var(--green)">3.33V</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0">
+          <span style="color:var(--muted)">Thresh freq = thresh × k</span>
+          <span style="font-weight:700;color:var(--amber)" id="tc-tfreq">56.3Hz</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     CODE
+══════════════════════════════════════ -->
+<div id="pane-code" class="pane hidden">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-head-label">ESP32 Firmware — doppler_platoon.ino</span>
+      <button class="btn btn-primary" onclick="copyCode()" style="font-size:9px;padding:3px 10px" id="copyBtn">Copy</button>
+    </div>
+    <div class="code-block" id="codeBlock"></div>
+  </div>
+</div>
+
+<!-- ══ STATUS BAR ══ -->
+<div id="statusbar">
+  <div class="sb-item">T=<span class="sb-val" id="sb-t">0.0s</span></div>
+  <div class="sb-item">LATCH=<span class="sb-val" id="sb-latch">LOW</span></div>
+  <div class="sb-item">DRIVE=<span class="sb-val" id="sb-drive">FWD</span></div>
+  <div class="sb-item">ESP=<span class="sb-val" id="sb-esp">OFF</span></div>
+  <div class="sb-item">GAP=<span class="sb-val" id="sb-gap">2.00m</span></div>
+  <div class="sb-item">FREQ=<span class="sb-val" id="sb-freq">0Hz</span></div>
+  <div style="margin-left:auto;font-size:9px;color:var(--muted);font-family:var(--mono)">HB100 · 10.525GHz · λ=28.5mm · k=70.42Hz/(m/s)</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// PARAMS
+// ═══════════════════════════════════════
+const P={k:70.42,dead:.8,pulse:.4,thresh:.8,safegap:.5,startgap:2,simspeed:1,rtop:10,rbot:10,pulldown:47,diodedrop:310,v5:5.0};
+const computeRails=()=>({v5va:P.v5-P.diodedrop/1000,vg:(P.v5-P.diodedrop/1000)*P.rbot/(P.rtop+P.rbot)});
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const S={running:true,t:0,gap:P.startgap,leadV:-1,trailV:1,relV:0,dHz:0,
+         trigH:false,latch:false,deadT:0,pulseT:0,cmdFwd:true,espOn:false,swTrig:false,drive:'FWD'};
+const HIST=200;
+const H2={freq:f(0),speed:f(0),gap:f(S.gap),g32:f(0),g35:f(0),g34:f(0),g26:f(1)};
+const TL=[],SL=[],TB=[];
+let tc=0;
+function f(v){return Array(HIST).fill(v)}
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function switchTab(n){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  const p=document.getElementById('pane-'+n);
+  p.classList.remove('hidden');p.style.display='';
+  document.getElementById('tab-'+n).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// SIM CONTROLS
+// ═══════════════════════════════════════
+function toggleSim(){
+  S.running=!S.running;
+  document.getElementById('pauseBtn').textContent=S.running?'⏸ Pause':'▶ Resume';
+  document.getElementById('hd-pill').textContent=S.running?'RUNNING':'PAUSED';
+  document.getElementById('hd-pill').className='pill '+(S.running?'pill-green':'pill-amber');
+}
+function resetAll(){
+  S.t=0;S.gap=P.startgap;S.latch=false;S.deadT=0;S.pulseT=0;
+  S.cmdFwd=true;S.drive='FWD';S.swTrig=false;S.trigH=false;
+  Object.assign(H2,{freq:f(0),speed:f(0),gap:f(P.startgap),g32:f(0),g35:f(0),g34:f(0),g26:f(1)});
+  TL.length=0;SL.length=0;TB.length=0;
+  pushTL('System reset','ok');
+}
+function softwareTrigger(){
+  if(!S.espOn){pushSerial('SW trig ignored – ESP OFF');return;}
+  S.swTrig=true;
+  pushTL('GPIO33 SW trigger → CLK_NODE → U5','warn');
+  pushSerial('GPIO33 HIGH → CLK edge → U5');
+  setTimeout(()=>S.swTrig=false,200);
+  triggerLatch();
+}
+function resetLatch(){
+  S.latch=false;S.deadT=0;S.pulseT=0;S.drive='FWD';S.cmdFwd=true;
+  pushTL('1/CLR asserted → Latch cleared','ok');
+  pushSerial('Latch cleared → CMD_FWD restored');
+}
+function triggerLatch(){
+  if(S.latch)return;
+  S.latch=true;S.deadT=P.dead;S.drive='DEAD';
+  pushTL('U5 LATCHED — 1Q=HI → U9 dead-time','err');
+  pushSerial('LATCH SET speed='+S.relV.toFixed(2)+'m/s dead='+P.dead+'s');
+}
+function sendFWD(h){
+  if(!S.espOn){pushSerial('ESP OFF');return;}
+  if(S.latch&&h){pushSerial('CMD_FWD blocked by latch');return;}
+  S.cmdFwd=h;
+  pushSerial('GPIO26 CMD_FWD → '+(h?'HIGH':'LOW'));
+}
+function espReset(){
+  if(!S.espOn)return;
+  pushSerial('--- EN RESET ---');
+  ['SDK v5.1.2','GPIO config OK','ISR on GPIO32 attached','Loop running.'].forEach((m,i)=>{
+    setTimeout(()=>pushSerial(m),(i+1)*350);
+  });
+}
+function toggleESP(){
+  S.espOn=!S.espOn;
+  const tog=document.getElementById('espToggle');
+  const th=document.getElementById('espThumb');
+  tog.className='toggle'+(S.espOn?' on':'');
+  th.style.left=S.espOn?'23px':'3px';
+  document.getElementById('espLabel').textContent=S.espOn?'ON':'OFF';
+  setLED('led-esp-pwr',S.espOn?'g':'off');
+  set('sb-esp',S.espOn?'ON':'OFF');
+  if(S.espOn){
+    appendBoot('Power ON → 3.3V rail up');
+    setTimeout(()=>appendBoot('SDK init...'),300);
+    setTimeout(()=>appendBoot('GPIO config done.'),700);
+    setTimeout(()=>appendBoot('FreqMeter GPIO32 ready.'),1000);
+    setTimeout(()=>appendBoot('Loop running.'),1300);
+    pushSerial('--- ESP32 BOOT ---');
+  } else {
+    appendBoot('Power OFF');
+    pushSerial('--- ESP32 OFF ---');
+  }
+}
+function appendBoot(m){
+  const e=document.getElementById('bootLog');if(!e)return;
+  e.innerHTML+=`<div>> ${m}</div>`;e.scrollTop=e.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+// SLIDERS / TUNER
+// ═══════════════════════════════════════
+function updateSlider(k,v){
+  v=parseFloat(v);
+  if(k==='lead'){S.leadV=v;set('vl-lead',v.toFixed(1)+' m/s');}
+  if(k==='trail'){S.trailV=v;set('vl-trail',v.toFixed(1)+' m/s');}
+  if(k==='thresh'){P.thresh=v;set('vl-thresh',v.toFixed(2)+' m/s');}
+}
+function tuneP(k,v){
+  v=parseFloat(v);P[k]=v;
+  const dp={'k':2,'dead':2,'pulse':2,'thresh':2,'safegap':2,'startgap':2,'simspeed':2,'rtop':1,'rbot':1,'pulldown':0,'diodedrop':0,'v5':2};
+  set('tv-'+k,v.toFixed(dp[k]||2));
+  const r=computeRails();
+  set('tc-5va',r.v5va.toFixed(2)+'V');
+  set('tc-vg',r.vg.toFixed(2)+'V');
+  set('tc-tfreq',(P.thresh*P.k).toFixed(1)+'Hz');
+}
+
+// ═══════════════════════════════════════
+// GPIO TABLE
+// ═══════════════════════════════════════
+const GPIOS=[
+  {pin:'GPIO32',label:'SQ / Doppler',dir:'IN',k:'g32'},
+  {pin:'GPIO35',label:'TRIG (thresh)',dir:'IN',k:'g35'},
+  {pin:'GPIO34',label:'Q_3V3 (latch)',dir:'IN',k:'g34'},
+  {pin:'GPIO26',label:'CMD_FWD',dir:'OUT',k:'g26'},
+  {pin:'GPIO33',label:'SW Trigger',dir:'OUT',k:'gsw'},
+  {pin:'GPIO25',label:'PWM TB6612',dir:'OUT',k:'gpwm'},
+  {pin:'VIN',   label:'5V rail',dir:'PWR',k:'gvin'},
+];
+function buildGPIO(){
+  document.getElementById('gpioTable').innerHTML=GPIOS.map(r=>`
+    <tr id="gtr-${r.k}" style="border-bottom:1px solid var(--border2)">
+      <td style="padding:4px 8px;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--accent)">${r.pin}</td>
+      <td style="padding:4px 4px;font-size:10px;color:var(--muted)">${r.label}</td>
+      <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-weight:700;font-size:10px" id="gv-${r.k}">—</td>
+      <td style="padding:4px 8px;text-align:center"><div class="node lo" id="gn-${r.k}" style="margin:auto"></div></td>
+    </tr>`).join('');
+}
+function updateGPIO(){
+  if(!S.espOn){GPIOS.forEach(r=>{set('gv-'+r.k,'—');nodeEl('gn-'+r.k,false);});return;}
+  const vals={g32:S.dHz>5,g35:S.trigH,g34:S.latch,g26:S.cmdFwd&&!S.latch,gsw:S.swTrig,gpwm:false,gvin:true};
+  GPIOS.forEach(r=>{
+    const h=vals[r.k];
+    const el=document.getElementById('gv-'+r.k);
+    if(el){el.textContent=r.k==='gvin'?P.v5.toFixed(1)+'V':(h?'HI':'LO');el.style.color=h?'var(--green)':'var(--red)';}
+    nodeEl('gn-'+r.k,h);
+  });
+}
+function nodeEl(id,hi){const e=document.getElementById(id);if(!e)return;e.className='node '+(hi?'hi':'lo');e.style.margin='auto';}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function setLED(id,s){const e=document.getElementById(id);if(!e)return;e.className='led '+s;}
+function setNode(id,mode){const e=document.getElementById(id);if(!e)return;e.className='node '+mode;}
+function setChip(id,...cls){const e=document.getElementById(id);if(!e)return;e.className='chip '+cls.join(' ');}
+function pushTL(msg,cls=''){
+  TL.unshift({t:S.t.toFixed(1),msg,cls});if(TL.length>80)TL.pop();
+  const el=document.getElementById('timeline');
+  if(el)el.innerHTML=TL.map(x=>`<div class="log-entry ${x.cls}">[${x.t}s] ${x.msg}</div>`).join('');
+}
+function pushSerial(msg){
+  if(!S.espOn)return;
+  SL.unshift('['+S.t.toFixed(2)+'s] '+msg);if(SL.length>80)SL.pop();
+  const el=document.getElementById('serialMon');
+  if(el){el.innerHTML=SL.map(s=>`<div>${s}</div>`).join('');el.scrollTop=0;}
+}
+const DC={FWD:'var(--green)',DEAD:'var(--amber)',REV:'var(--red)',BRK:'var(--accent)'};
+
+// ═══════════════════════════════════════
+// MAIN TICK
+// ═══════════════════════════════════════
+function simTick(){
+  if(!S.running)return;
+  const dt=(50/1000)*P.simspeed;
+  S.t+=dt;
+  S.relV=Math.max(0,S.trailV-S.leadV);
+  S.dHz=S.relV*P.k;
+  const dm={FWD:1,DEAD:0,REV:-0.5,BRK:0.1}[S.drive]||1;
+  S.gap-=S.relV*dt*dm;
+  if(S.gap<0.1)S.gap=0.1;
+  if(S.gap>8)S.gap=8;
+
+  if(S.relV>P.thresh&&!S.trigH){
+    S.trigH=true;
+    pushTL('TRIG asserted → GPIO35','warn');
+    if(S.espOn)pushSerial('TRIG HI spd='+S.relV.toFixed(2)+' freq='+S.dHz.toFixed(0));
+    if(!S.latch)triggerLatch();
+  } else if(S.relV<=P.thresh)S.trigH=false;
+
+  if(S.deadT>0){S.deadT-=dt;if(S.deadT<=0){S.deadT=0;S.pulseT=P.pulse;S.drive='REV';pushTL('U9 expired → U10 REV pulse','warn');if(S.espOn)pushSerial('Dead done → REV '+P.pulse+'s');}}
+  if(S.pulseT>0){S.pulseT-=dt;if(S.pulseT<=0){S.pulseT=0;S.drive='BRK';pushTL('U10 expired → BRK','ok');if(S.espOn)pushSerial('REV done → BRK');}}
+  if(!S.latch)S.drive='FWD';
+
+  H2.freq.push(S.dHz);H2.freq.shift();
+  H2.speed.push(S.relV);H2.speed.shift();
+  H2.gap.push(S.gap);H2.gap.shift();
+  H2.g32.push(S.dHz>5?1:0);H2.g32.shift();
+  H2.g35.push(S.trigH?1:0);H2.g35.shift();
+  H2.g34.push(S.latch?1:0);H2.g34.shift();
+  H2.g26.push(S.cmdFwd&&!S.latch?1:0);H2.g26.shift();
+
+  if(S.espOn&&tc%20===0)pushSerial('freq='+S.dHz.toFixed(0)+'Hz spd='+S.relV.toFixed(2)+'m/s gap='+S.gap.toFixed(2)+'m drv='+S.drive);
+  tc++;
+  updateUI();
+}
+
+// ═══════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════
+function updateUI(){
+  set('m-freq',Math.round(S.dHz));
+  document.getElementById('m-freq').style.color=S.dHz>5?'var(--accent)':'var(--muted)';
+  set('m-spd',S.relV.toFixed(2));
+  set('m-gap',S.gap.toFixed(2));
+  document.getElementById('m-gap').style.color=S.gap<P.safegap?'var(--red)':S.gap<1?'var(--amber)':'var(--green)';
+  set('m-latch',S.latch?'HIGH':'LOW');
+  document.getElementById('m-latch').style.color=S.latch?'var(--red)':'var(--muted)';
+  set('m-drive',S.drive);
+  document.getElementById('m-drive').style.color=DC[S.drive]||'var(--muted)';
+
+  set('hd-t',S.t.toFixed(1)+'s');
+  set('hd-f',Math.round(S.dHz)+' Hz');
+  set('hd-g',S.gap.toFixed(2)+' m');
+  set('hd-d',S.drive);
+
+  set('sb-t',S.t.toFixed(1)+'s');
+  set('sb-latch',S.latch?'HIGH':'LOW');
+  document.getElementById('sb-latch').style.color=S.latch?'var(--red)':'var(--text)';
+  set('sb-drive',S.drive);
+  document.getElementById('sb-drive').style.color=DC[S.drive]||'var(--text)';
+  set('sb-gap',S.gap.toFixed(2)+'m');
+  set('sb-freq',Math.round(S.dHz)+'Hz');
+
+  const r=computeRails();
+  set('rv-5va',r.v5va.toFixed(2)+'V');
+  set('rv-vg',r.vg.toFixed(2)+'V');
+  set('rv-5v',P.v5.toFixed(2)+'V');
+  set('rv-dead',S.deadT.toFixed(3)+'s');
+  set('rv-pulse',S.pulseT.toFixed(3)+'s');
+  set('rv-tfreq',(P.thresh*P.k).toFixed(1)+'Hz');
+
+  set('gv-freq',Math.round(S.dHz)+' Hz');
+  set('gv-spd',S.relV.toFixed(2)+' m/s');
+  set('gv-gap',S.gap.toFixed(2)+' m');
+  set('v-relspd','relV: '+S.relV.toFixed(2)+' m/s');
+  set('v-doppler','IF: '+Math.round(S.dHz)+' Hz');
+
+  setLED('hd-led',S.running?'g':'y');
+  setLED('led-5v','g');setLED('led-5va','g');
+  setLED('led-fwd',S.drive==='FWD'?'g':'off');
+  setLED('led-brk',S.drive==='BRK'?'y':'off');
+  setLED('led-rev',S.drive==='REV'?'r':'off');
+  setLED('ind-trig',S.trigH?'y':'off');
+  setLED('ind-latch',S.latch?'r':'off');
+  setLED('ind-dead',S.deadT>0?'y':'off');
+  setLED('ind-revp',S.pulseT>0?'r':'off');
+  setLED('ind-fwd2',S.drive==='FWD'?'g':'off');
+  setLED('ind-esp',S.espOn?'g':'off');
+  setLED('veh-emerg',S.latch?'r':'off');
+  setLED('veh-fwd',S.drive==='FWD'?'g':'off');
+  setLED('veh-rev',S.drive==='REV'?'r':'off');
+
+  const nSQ=S.dHz>5?'hi':'lo';
+  ['nd-sq','nd-sq2'].forEach(id=>setNode(id,nSQ));
+  setNode('nd-trig',S.trigH?'warn':'lo');
+  ['nd-q','nd-q2'].forEach(id=>setNode(id,S.latch?'err':'lo'));
+  setNode('nd-qb',!S.latch?'hi':'lo');
+  setNode('nd-env',S.dHz>5?'hi':'lo');
+  setNode('nd-dead',S.deadT>0?'warn':'lo');
+  setNode('nd-pulse',S.pulseT>0?'err':'lo');
+
+  const chipState=(active,type='')=>active?'active'+(type?' active-'+type:''):'';
+  setChip('ch-bat',chipState(true,'g'));
+  setChip('ch-buck',chipState(true,'g'));
+  setChip('ch-diode',chipState(true));
+  setChip('ch-vg',chipState(true));
+  setChip('ch-hb100',chipState(S.dHz>5));
+  setChip('ch-u1',chipState(S.dHz>5));
+  setChip('ch-u3',chipState(S.dHz>5||S.trigH));
+  setChip('ch-u4',chipState(S.trigH,'a'));
+  setChip('ch-clk',chipState(S.trigH||S.swTrig,'a'));
+  setChip('ch-u5',chipState(S.latch,'r'));
+  setChip('ch-div',chipState(S.latch,'r'));
+  setChip('ch-u9',chipState(S.deadT>0,'a'));
+  setChip('ch-u10',chipState(S.pulseT>0,'r'));
+  setChip('ch-u6',chipState(S.drive==='FWD'));
+  setChip('ch-u6out',chipState(true));
+  setChip('ch-tb',chipState(true));
+  setChip('ch-motor',chipState(S.drive==='FWD','g'));
+  setChip('ch-esp-sq',chipState(S.espOn));
+  setChip('ch-esp-q',chipState(S.espOn&&S.latch,'r'));
+  setChip('ch-esp-cmd',chipState(S.espOn));
+
+  updateGPIO();
+  drawVehicle();
+  drawRadar();
+  drawGraphs();
+  drawTiming();
+}
+
+// ═══════════════════════════════════════
+// VEHICLE CANVAS
+// ═══════════════════════════════════════
+let rPh=0;
+function drawVehicle(){
+  const cv=document.getElementById('vehicleCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#F7F6F2';ctx.fillRect(0,0,W,H);
+
+  // subtle grid
+  ctx.strokeStyle='#EDEAE3';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const ry=H/2;
+  // road surface
+  ctx.fillStyle='#DDDBD3';ctx.fillRect(0,ry-22,W,44);
+  // road edges
+  ctx.strokeStyle='#C8C5BD';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,ry-22);ctx.lineTo(W,ry-22);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,ry+22);ctx.lineTo(W,ry+22);ctx.stroke();
+  // center dashes
+  ctx.setLineDash([22,14]);ctx.strokeStyle='#F7F6F2';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,ry);ctx.lineTo(W,ry);ctx.stroke();
+  ctx.setLineDash([]);
+
+  const pxM=72;
+  const tX=90;
+  const lX=Math.min(tX+S.gap*pxM+72,W-100);
+
+  // radar cone
+  if(S.dHz>5){
+    const beamEnd=Math.min(lX-5,W-10);
+    const halfAngle=14;
+    const grad=ctx.createLinearGradient(tX+72,ry,beamEnd,ry);
+    grad.addColorStop(0,'rgba(29,78,216,.15)');
+    grad.addColorStop(1,'rgba(29,78,216,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.moveTo(tX+72,ry);ctx.lineTo(beamEnd,ry-halfAngle);ctx.lineTo(beamEnd,ry+halfAngle);ctx.closePath();ctx.fill();
+    // dots on beam
+    for(let i=1;i<=5;i++){
+      const bx=tX+72+(beamEnd-tX-72)*(i/5.5);
+      const alpha=0.08+i*0.06;
+      ctx.fillStyle='rgba(29,78,216,'+alpha+')';
+      ctx.beginPath();ctx.arc(bx,ry,2.5,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  drawCar(ctx,tX,ry,S.drive,false);
+  drawCar(ctx,lX,ry,'LEAD',true);
+
+  // gap line
+  const mid=(tX+72+lX)/2;
+  ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(tX+72,ry-26);ctx.lineTo(lX,ry-26);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#555';ctx.font='bold 10px Courier New';ctx.textAlign='center';
+  ctx.fillText(S.gap.toFixed(2)+'m',mid,ry-30);
+  // tick marks
+  [[tX+72,ry-29],[lX,ry-29]].forEach(([x,y])=>{ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,ry-23);ctx.stroke();});
+
+  // labels + speed
+  ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillStyle='#777';
+  ctx.fillText('TRAILING (HB100)',tX+36,ry+36);
+  ctx.fillText('LEAD VEHICLE',lX+34,ry+36);
+
+  ctx.font='bold 10px Courier New';ctx.textAlign='left';
+  const driveLabel={FWD:'▶ FWD',DEAD:'⏸ DEAD',REV:'◀ REV',BRK:'■ BRK'}[S.drive]||S.drive;
+  const driveColor={FWD:'#166534',DEAD:'#92400E',REV:'#991B1B',BRK:'#1D4ED8'}[S.drive]||'#555';
+  ctx.fillStyle=driveColor;ctx.fillText(S.trailV.toFixed(1)+'m/s ['+driveLabel+']',tX,ry-32);
+  ctx.fillStyle='#1D4ED8';ctx.fillText(S.leadV.toFixed(1)+'m/s',lX,ry-32);
+}
+
+function drawCar(ctx,x,y,mode,isLead){
+  const w=70,h=26,cy=y-h/2;
+  const col={FWD:'#166534',DEAD:'#92400E',REV:'#991B1B',BRK:'#1E3A5F',LEAD:'#1A2E5A'}[mode]||'#444';
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.08)';
+  ctx.beginPath();ctx.roundRect(x+2,cy+2,w,h,4);ctx.fill();
+  // body
+  ctx.fillStyle=col;
+  ctx.beginPath();ctx.roundRect(x,cy,w,h,4);ctx.fill();
+  // body stroke
+  ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.roundRect(x,cy,w,h,4);ctx.stroke();
+  // window
+  ctx.fillStyle='rgba(255,255,255,.2)';
+  ctx.beginPath();ctx.roundRect(x+8,cy+4,w-16,h-9,2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.08)';
+  ctx.beginPath();ctx.roundRect(x+8,cy+4,w*0.4,h-9,2);ctx.fill();
+  // wheels
+  ctx.fillStyle='#1A1A1A';
+  [[x+10,cy+h],[x+w-10,cy+h]].forEach(([wx,wy])=>{
+    ctx.beginPath();ctx.ellipse(wx,wy,6,4,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.ellipse(wx,wy,6,4,0,0,Math.PI*2);ctx.stroke();
+  });
+  // radar on trailing
+  if(!isLead){
+    ctx.strokeStyle='#1D4ED8';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(x+w,cy+h/2,10,Math.PI*.6,Math.PI*1.4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+w,cy+h/2);ctx.lineTo(x+w+10,cy+h/2);ctx.stroke();
+  }
+  // brake lights
+  if(['BRK','DEAD'].includes(mode)){
+    ctx.fillStyle='#EF4444';
+    const lx=isLead?x+w-2:x+2;
+    ctx.beginPath();ctx.ellipse(lx,cy+h*0.35,3,3,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(lx,cy+h*0.65,3,3,0,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════
+// RADAR
+// ═══════════════════════════════════════
+function drawRadar(){
+  const cv=document.getElementById('radarCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#FAFAF8';ctx.fillRect(0,0,W,H);
+  // grid lines
+  ctx.strokeStyle='#EDEAE3';ctx.lineWidth=1;
+  for(let y=0;y<H;y+=H/4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+
+  rPh+=S.dHz>5?S.dHz*0.015:0.03;
+  const amp=S.dHz>5?26:3;
+  const freq=Math.max(0.5,S.dHz*0.08);
+
+  // IF signal
+  ctx.strokeStyle=S.dHz>5?'#1D4ED8':'#C8C5BD';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let i=0;i<=W;i++){
+    const v=H/2+amp*Math.sin((i/W)*Math.PI*2*freq+rPh);
+    i===0?ctx.moveTo(i,v):ctx.lineTo(i,v);
+  }
+  ctx.stroke();
+
+  // squarer signal
+  if(S.dHz>5){
+    ctx.strokeStyle='#16A34A';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+    const sqH=8,sqY0=H/2-sqH,sqY1=H/2+sqH;
+    ctx.beginPath();
+    let prev=1;
+    for(let i=0;i<=W;i++){
+      const v=Math.sin((i/W)*Math.PI*2*freq+rPh);
+      const sq=v>0?1:-1;
+      const y=sq>0?sqY0:sqY1;
+      if(sq!==prev){const yt=sq>0?sqY1:sqY0;ctx.lineTo(i,yt);ctx.lineTo(i,y);prev=sq;}
+      else ctx.lineTo(i,y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // threshold marker
+  const thX=(P.thresh*P.k/350)*W;
+  ctx.strokeStyle='#D97706';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(thX,0);ctx.lineTo(thX,H);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#D97706';ctx.font='bold 9px Courier New';ctx.textAlign='left';
+  ctx.fillText('thresh '+(P.thresh*P.k).toFixed(0)+'Hz',thX+3,H-4);
+
+  // label
+  ctx.fillStyle='#111';ctx.font='bold 10px Courier New';ctx.textAlign='left';
+  ctx.fillText('IF: '+S.dHz.toFixed(0)+'Hz  →  '+S.relV.toFixed(2)+'m/s  [k='+P.k.toFixed(2)+']',8,13);
+  ctx.fillStyle='#16A34A';ctx.font='9px Courier New';
+  ctx.fillText('SQ (GPIO32)',8,H-4);
+}
+
+// ═══════════════════════════════════════
+// GRAPH ENGINE
+// ═══════════════════════════════════════
+const CC={};
+function gc(id){
+  if(!CC[id]){const c=document.getElementById(id);if(!c)return null;CC[id]={ctx:c.getContext('2d'),W:c.width,H:c.height};}
+  return CC[id];
+}
+
+function drawLine(id,data,color,maxY,minY=0,ySteps=4){
+  const g=gc(id);if(!g)return;
+  const {ctx,W,H}=g,pad={t:4,r:36,b:4,l:4};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#FAFAF8';ctx.fillRect(0,0,W,H);
+
+  // grid + y-axis labels
+  ctx.strokeStyle='#EDEAE3';ctx.lineWidth=1;
+  ctx.fillStyle='#A8A69E';ctx.font='8px Courier New';ctx.textAlign='right';
+  for(let i=0;i<=ySteps;i++){
+    const v=minY+(i/ySteps)*(maxY-minY);
+    const y=pad.t+cH-(i/ySteps)*cH;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();
+    ctx.fillText(v.toFixed(maxY>50?0:1),W-2,y+3);
+  }
+
+  const range=maxY-minY||1;
+  const ptX=(i)=>pad.l+(i/(HIST-1))*cW;
+  const ptY=(v)=>pad.t+cH-((v-minY)/range)*cH;
+
+  // area
+  ctx.fillStyle=color+'18';
+  ctx.beginPath();
+  data.forEach((v,i)=>{i===0?ctx.moveTo(ptX(i),ptY(v)):ctx.lineTo(ptX(i),ptY(v));});
+  ctx.lineTo(ptX(HIST-1),pad.t+cH);ctx.lineTo(pad.l,pad.t+cH);ctx.closePath();ctx.fill();
+
+  // line
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;
+  ctx.beginPath();
+  data.forEach((v,i)=>{i===0?ctx.moveTo(ptX(i),ptY(v)):ctx.lineTo(ptX(i),ptY(v));});
+  ctx.stroke();
+
+  // current dot
+  const lv=data[HIST-1];
+  ctx.fillStyle=color;ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(ptX(HIST-1),ptY(lv),4,0,Math.PI*2);ctx.fill();ctx.stroke();
+}
+
+function drawGpioGraph(){
+  const g=gc('gGpio');if(!g)return;
+  const {ctx,W,H}=g;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#FAFAF8';ctx.fillRect(0,0,W,H);
+  const sigs=[
+    {d:H2.g32,c:'#1D4ED8',l:'32 SQ'},
+    {d:H2.g35,c:'#D97706',l:'35 TRIG'},
+    {d:H2.g34,c:'#DC2626',l:'34 1Q'},
+    {d:H2.g26,c:'#16A34A',l:'26 FWD'},
+  ];
+  const rh=H/4;
+  sigs.forEach(({d,c,l},ri)=>{
+    const y0=ri*rh,yH=y0+3,yL=y0+rh-5;
+    ctx.strokeStyle=c;ctx.lineWidth=1.5;
+    ctx.beginPath();
+    d.forEach((v,i)=>{const x=(i/(HIST-1))*W;const y=v?yH:yL;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();
+    ctx.fillStyle=c;ctx.font='bold 8px Courier New';ctx.textAlign='left';
+    ctx.fillText(l,3,y0+11);
+  });
+}
+
+function drawPowerGraph(){
+  const g=gc('gPower');if(!g)return;
+  const {ctx,W,H}=g;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#FAFAF8';ctx.fillRect(0,0,W,H);
+  const r=computeRails();
+  const rails=[
+    {v:P.v5,c:'#D97706',l:'5V'},
+    {v:r.v5va,c:'#1D4ED8',l:'5VA'},
+    {v:r.vg,c:'#7C3AED',l:'VG'},
+    {v:3.3,c:'#16A34A',l:'3V3L'},
+  ];
+  rails.forEach(({v,c,l})=>{
+    const y=H-((v/5.6)*(H-10))-4;
+    ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=c;ctx.font='bold 9px Courier New';ctx.textAlign='left';
+    ctx.fillText(l+' '+v.toFixed(2)+'V',5,y-3);
+  });
+}
+
+function drawGraphs(){
+  drawLine('gFreq',H2.freq,'#1D4ED8',300,0,5);
+  drawLine('gSpeed',H2.speed,'#0E7490',5,0,5);
+  drawLine('gGap',H2.gap,'#166534',8,0,4);
+  drawGpioGraph();
+  drawPowerGraph();
+}
+
+// ═══════════════════════════════════════
+// TIMING
+// ═══════════════════════════════════════
+function drawTiming(){
+  const cv=document.getElementById('timingCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  TB.push({sq:S.dHz>5?1:0,trig:S.trigH?1:0,q:S.latch?1:0,dead:S.deadT>0?1:0,pulse:S.pulseT>0?1:0,fwd:S.cmdFwd&&!S.latch?1:0});
+  if(TB.length>W)TB.shift();
+
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#FAFAF8';ctx.fillRect(0,0,W,H);
+
+  const sigs=[
+    {k:'sq',c:'#1D4ED8',l:'SQ (GPIO32)'},
+    {k:'trig',c:'#D97706',l:'TRIG (GPIO35)'},
+    {k:'q',c:'#DC2626',l:'1Q (GPIO34)'},
+    {k:'dead',c:'#92400E',l:'DEAD (U9)'},
+    {k:'pulse',c:'#7C3AED',l:'PULSE (U10)'},
+    {k:'fwd',c:'#16A34A',l:'FWD (U6 1Y)'},
+  ];
+  const rh=H/sigs.length;
+
+  // grid
+  ctx.strokeStyle='#EDEAE3';ctx.lineWidth=1;
+  for(let i=0;i<=sigs.length;i++){const y=i*rh;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  sigs.forEach(({k,c,l},ri)=>{
+    const y0=ri*rh,yH=y0+5,yL=y0+rh-7;
+    // hi region fill
+    ctx.fillStyle=c+'14';
+    let inHi=false,hStart=0;
+    TB.forEach((s,i)=>{
+      if(s[k]&&!inHi){inHi=true;hStart=i;}
+      if(!s[k]&&inHi){ctx.fillRect(hStart,y0+1,i-hStart,rh-2);inHi=false;}
+    });
+    if(inHi)ctx.fillRect(hStart,y0+1,TB.length-hStart,rh-2);
+
+    // waveform
+    ctx.strokeStyle=c;ctx.lineWidth=1.5;
+    ctx.beginPath();
+    TB.forEach((s,i)=>{const y=s[k]?yH:yL;i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);});
+    ctx.stroke();
+
+    // label
+    ctx.fillStyle=c;ctx.font='bold 8px Courier New';ctx.textAlign='left';
+    ctx.fillText(l,3,y0+12);
+  });
+}
+
+// ═══════════════════════════════════════
+// CODE
+// ═══════════════════════════════════════
+const CODE=`/*
+ * doppler_platoon.ino
+ * Doppler Radar Collision Avoidance — Trailing Vehicle
+ * Hardware: HB100 + U1(LM358P) + U3/U4(HLF393N)
+ *           U5(74HCT74) + U9/U10(NE555) + U6(74HC08)
+ *           TB6612FNG + ESP32
+ =========================================================*/
+
+// ── GPIO MAP ─────────────────────────────────────────
+#define PIN_SQ      32   // Doppler square (ISR on RISING)
+#define PIN_TRIG    35   // Threshold trigger  [INPUT_ONLY]
+#define PIN_Q3V3    34   // Latch 1Q via divider [INPUT_ONLY]
+#define PIN_CMD_FWD 26   // Forward drive → U6 1A
+#define PIN_SW_TRIG 33   // SW / V2V trigger → CLK_NODE
+#define PIN_PWM     25   // PWM → TB6612
+
+// ── CONSTANTS ────────────────────────────────────────
+#define HB100_K    70.42f   // Hz per m/s  (2f/c, f=10.525GHz)
+#define BRAKE_THR   0.5f    // m/s closing speed → reduce PWM
+#define PWM_MAX     200     // 0-255 duty cycle
+
+// ── GLOBALS ──────────────────────────────────────────
+volatile uint32_t sqRiseUs   = 0;
+volatile uint32_t sqPeriodUs = 0;
+volatile bool     sqFresh    = false;
+
+float    dopplerHz = 0;
+float    relSpeed  = 0;
+bool     latchPrev = false;
+uint32_t telMs     = 0;
+
+// ── ISR: rising edge on SQ ───────────────────────────
+void IRAM_ATTR onSqRise() {
+  uint32_t now = micros();
+  if (sqRiseUs > 0) {
+    sqPeriodUs = now - sqRiseUs;
+    sqFresh    = true;
+  }
+  sqRiseUs = now;
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\\n=== Doppler Platoon v1.0 ===");
+
+  // Inputs
+  pinMode(PIN_SQ,      INPUT);
+  pinMode(PIN_TRIG,    INPUT);
+  pinMode(PIN_Q3V3,    INPUT);
+
+  // Outputs
+  pinMode(PIN_CMD_FWD, OUTPUT);
+  pinMode(PIN_SW_TRIG, OUTPUT);
+  pinMode(PIN_PWM,     OUTPUT);
+
+  // Safe defaults
+  digitalWrite(PIN_CMD_FWD, HIGH);   // allow forward drive
+  digitalWrite(PIN_SW_TRIG, LOW);    // no SW trigger
+
+  // PWM setup (20 kHz, 8-bit on LEDC channel 0)
+  ledcSetup(0, 20000, 8);
+  ledcAttachPin(PIN_PWM, 0);
+  ledcWrite(0, PWM_MAX);
+
+  // Attach rising-edge ISR on SQ
+  attachInterrupt(digitalPinToInterrupt(PIN_SQ), onSqRise, RISING);
+
+  Serial.println("GPIO OK | ISR on GPIO32 attached | Loop start");
+}
+
+void loop() {
+
+  // 1. Update Doppler measurement ──────────────────────
+  if (sqFresh) {
+    noInterrupts();
+    uint32_t p = sqPeriodUs;
+    sqFresh     = false;
+    interrupts();
+    if (p > 100) {                     // reject glitches
+      dopplerHz = 1e6f / p;
+      relSpeed  = dopplerHz / HB100_K;
+    }
+  }
+  // Timeout: no pulse for 500 ms → speed = 0
+  if ((uint32_t)(micros() - sqRiseUs) > 500000UL) {
+    dopplerHz = 0;
+    relSpeed  = 0;
+  }
+
+  // 2. Read hardware lines ─────────────────────────────
+  bool trigNow  = digitalRead(PIN_TRIG);
+  bool latchNow = digitalRead(PIN_Q3V3);
+
+  // 3. Latch event detection ───────────────────────────
+  if (latchNow && !latchPrev) {
+    Serial.printf("[LATCH] spd=%.2fm/s freq=%.0fHz\\n",
+                  relSpeed, dopplerHz);
+    digitalWrite(PIN_CMD_FWD, LOW);    // belt+suspenders
+  }
+  latchPrev = latchNow;
+
+  // 4. Normal drive: proportional PWM braking ──────────
+  if (!latchNow) {
+    int duty = PWM_MAX;
+    if (relSpeed > BRAKE_THR)
+      duty = constrain(
+        (int)(PWM_MAX * (1.0f - relSpeed / 3.0f)),
+        20, PWM_MAX
+      );
+    ledcWrite(0, duty);
+    digitalWrite(PIN_CMD_FWD, HIGH);
+  }
+
+  // 5. Serial telemetry @ 10 Hz ────────────────────────
+  if (millis() - telMs >= 100) {
+    telMs = millis();
+    Serial.printf(
+      "freq=%dHz spd=%.2fm/s latch=%d trig=%d fwd=%d\\n",
+      (int)dopplerHz, relSpeed,
+      latchNow, trigNow,
+      digitalRead(PIN_CMD_FWD)
+    );
+  }
+
+  // 6. Serial command handler ──────────────────────────
+  if (Serial.available()) {
+    switch (Serial.read()) {
+      case 'T': swTrigger(); break;             // SW trigger
+      case 'F': digitalWrite(PIN_CMD_FWD, HIGH); break;
+      case 'B': digitalWrite(PIN_CMD_FWD, LOW);  break;
+    }
+  }
+}
+
+// Pulse GPIO33 → 1N4148 → CLK_NODE → U5 CLK edge
+void swTrigger() {
+  Serial.println("[SW] GPIO33 trigger pulse");
+  digitalWrite(PIN_SW_TRIG, HIGH);
+  delayMicroseconds(500);
+  digitalWrite(PIN_SW_TRIG, LOW);
+}`;
+
+// Syntax highlight
+function hl(code){
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g,m=>`<span class="cc">${m}</span>`)
+    .replace(/\/\/.*/g,m=>`<span class="cc">${m}</span>`)
+    .replace(/\b(void|bool|int|float|uint32_t|volatile|const|if|else|while|for|switch|case|break|return|true|false|noInterrupts|interrupts|nullptr)\b/g,m=>`<span class="ck">${m}</span>`)
+    .replace(/#(define|include|pragma)\b[^\n]*/g,m=>`<span class="cd">${m}</span>`)
+    .replace(/\b(\d+\.?\d*f?)\b/g,m=>`<span class="cn">${m}</span>`)
+    .replace(/"([^"]*)"/g,(_,s)=>`<span class="cs">"${s}"</span>`);
+}
+document.getElementById('codeBlock').innerHTML=hl(CODE);
+
+function copyCode(){
+  navigator.clipboard.writeText(CODE).then(()=>{
+    const b=document.getElementById('copyBtn');b.textContent='Copied ✓';
+    setTimeout(()=>b.textContent='Copy',1800);
+  });
+}
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+buildGPIO();
+setLED('led-5v','g');setLED('led-5va','g');setLED('hd-led','g');
+set('rv-5v',P.v5.toFixed(2)+'V');
+const initR=computeRails();
+set('rv-5va',initR.v5va.toFixed(2)+'V');
+set('rv-vg',initR.vg.toFixed(2)+'V');
+
+pushTL('BAT_SW → LM2596 → 5V rail UP','ok');
+pushTL('1N4007 → 5VA (~4.7V) UP','ok');
+pushTL('VG divider settled (~2.35V)','ok');
+pushTL('U5 1/CLR RC reset complete (4.7kΩ + 1µF)','ok');
+pushTL('System ready. Toggle ESP32 to start.','');
+
+setInterval(simTick,50);
+</script>
+</body>
+</html>
